@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 14 18:06:22 2025
 
-@author: andre
-"""
 
-# Add matplotlib for plotting
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
