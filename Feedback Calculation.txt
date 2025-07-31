@@ -1,0 +1,112 @@
+
+
+
+
+
+
+import xarray as xr
+import numpy as np
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+
+# List of input file pairs and corresponding output files
+file_pairs = [
+]
+
+# Loop over each file pair
+for file_path1, file_path2, output_file in file_pairs:
+
+    # Load datasets
+    ds1 = xr.open_dataset(file_path1)
+    ds2 = xr.open_dataset(file_path2)
+
+    # Set time range
+    start_year = '1984'
+    end_year = '2008'
+    start_year_int = int(start_year)
+    end_year_int = int(end_year)
+
+    # Select the data within the specified time range
+    ds_selected1 = ds1.sel(time=slice(f'{start_year}-01-01', f'{end_year}-12-31'))
+    ds_selected2 = ds2.sel(time=slice(f'{start_year}-01-01', f'{end_year}-12-31'))
+
+    # Select latitudes between 60°S and 60°N, and all longitudes
+    sst = ds_selected1['sst'].sel(lat=slice(-60, 60))
+    hf = ds_selected2['net_heat_flux'].sel(lat=slice(-60, 60))
+
+    latitudes = sst.lat.values
+    longitudes = sst.lon.values
+
+    # Initialize feedback and std dev arrays
+    feedbacks = np.full((len(latitudes), len(longitudes)), np.nan, dtype=np.float32)
+    std_devs = np.full((len(latitudes), len(longitudes)), np.nan, dtype=np.float32)
+
+    # Define the lead-lag covariance function
+    def lead_lag_covariance(sst_anomalies, hf_anomalies, max_lag):
+        lags = np.arange(-max_lag, max_lag + 1)
+        cov_sst_hf = np.zeros(len(lags))
+        cov_sst_sst = np.zeros(len(lags))
+
+        for i, lag in enumerate(lags):
+            valid_idx = ~np.isnan(sst_anomalies) & ~np.isnan(hf_anomalies)
+            if len(valid_idx) == 0:
+                continue
+            if lag < 0:
+                if len(sst_anomalies[:lag][valid_idx[:lag]]) == len(hf_anomalies[-lag:][valid_idx[-lag:]]):
+                    cov_sst_hf[i] = np.cov(sst_anomalies[:lag][valid_idx[:lag]], hf_anomalies[-lag:][valid_idx[-lag:]])[0, 1]
+                    cov_sst_sst[i] = np.cov(sst_anomalies[:lag][valid_idx[:lag]], sst_anomalies[-lag:][valid_idx[-lag:]])[0, 1]
+            elif lag > 0:
+                if len(sst_anomalies[lag:][valid_idx[lag:]]) == len(hf_anomalies[:-lag][valid_idx[:-lag]]):
+                    cov_sst_hf[i] = np.cov(sst_anomalies[lag:][valid_idx[lag:]], hf_anomalies[:-lag][valid_idx[:-lag]])[0, 1]
+                    cov_sst_sst[i] = np.cov(sst_anomalies[lag:][valid_idx[lag:]], sst_anomalies[:-lag][valid_idx[:-lag]])[0, 1]
+            else:
+                cov_sst_hf[i] = np.cov(sst_anomalies[valid_idx], hf_anomalies[valid_idx])[0, 1]
+                cov_sst_sst[i] = np.cov(sst_anomalies[valid_idx], sst_anomalies[valid_idx])[0, 1]
+        return lags, cov_sst_hf, cov_sst_sst
+
+    # Define the feedback calculation function
+    def calculate_feedback(sst, hf, start_year_int, end_year_int, ensemble=1):
+        max_lag = 15
+        lags, cov_sst_hf, cov_sst_sst = lead_lag_covariance(sst, hf, max_lag)
+        lag_minus1_index = lags.tolist().index(-1)
+        
+        feedback = -cov_sst_hf[lag_minus1_index] / cov_sst_sst[lag_minus1_index]
+        
+        # Monte Carlo simulation
+        feedbacks_ensemble = np.zeros(ensemble)
+        for i in range(ensemble):
+            np.random.shuffle(hf)
+            _, cov_sst_hf_ensemble, _ = lead_lag_covariance(sst, hf, max_lag)
+            feedbacks_ensemble[i] = -cov_sst_hf_ensemble[lag_minus1_index] / cov_sst_sst[lag_minus1_index]
+
+        feedback_std = np.std(feedbacks_ensemble)
+        return feedback, feedback_std
+
+    # Loop through each latitude and longitude combination
+    for lat_idx, lat in enumerate(latitudes):
+        for lon_idx, lon in enumerate(longitudes):
+            sst_values = sst.sel(lat=lat, lon=lon, method='nearest').values.squeeze()
+            hf_values = hf.sel(lat=lat, lon=lon, method='nearest').values.squeeze()
+
+            feedbacks[lat_idx, lon_idx], std_devs[lat_idx, lon_idx] = calculate_feedback(sst_values, hf_values, start_year_int, end_year_int)
+
+    # Convert feedback arrays into DataArrays
+    feedback_array = xr.DataArray(feedbacks, coords=[latitudes, longitudes], dims=['lat', 'lon'], name='feedback')
+    std_dev_array = xr.DataArray(std_devs, coords=[latitudes, longitudes], dims=['lat', 'lon'], name='feedback_std_dev')
+
+    # Create a new dataset for the feedbacks
+    feedback_ds = xr.Dataset({
+        'feedback': feedback_array,
+        'feedback_std_dev': std_dev_array
+    })
+
+    # Save the feedback dataset to a NetCDF file
+    feedback_ds.to_netcdf(output_file)
+
+    print(f"Feedback data saved to {output_file}")
+
+print("All feedback calculations are complete.")

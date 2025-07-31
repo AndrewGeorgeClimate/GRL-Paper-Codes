@@ -1,0 +1,136 @@
+import xarray as xr
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import os
+
+# Paths to the uploaded files
+file_path1 = 
+file_path2 = 
+file_path_enso_output = 
+file_path_ssta_deno = 
+file_path_hfa_deno = 
+
+# Load the datasets
+ds1 = xr.open_dataset(file_path1)
+ds2 = xr.open_dataset(file_path2)
+
+# Set time range
+start_year = 
+end_year = 
+start_year_int = int(start_year)
+end_year_int = int(end_year)
+
+# Select the data within the specified time range
+ds_selected1 = ds1.sel(time=slice(f'{start_year}-01-01', f'{end_year}-12-31'))
+ds_selected2 = ds2.sel(time=slice(f'{start_year}-01-01', f'{end_year}-12-31'))
+
+# Select latitudes between globally, and all longitudes
+sst = ds_selected1['tos'].sel(lat=slice(-89, 89))
+hf = ds_selected2['net_heat_flux'].sel(lat=slice(-89, 89))
+
+# third order polynomial detrend
+def detrend_data(data, time_years, order=3):
+    shape = data.shape
+    data_flat = data.values.reshape((shape[0], -1))
+    detrended_flat = np.empty_like(data_flat)
+    
+    for i in range(data_flat.shape[1]):
+        valid_idx = ~np.isnan(data_flat[:, i])
+        if np.sum(valid_idx) < 4:
+            detrended_flat[:, i] = np.nan
+            continue
+
+        coefficients = np.polyfit(time_years[valid_idx], data_flat[valid_idx, i], min(order, np.sum(valid_idx) - 1))
+        trend = np.polyval(coefficients, time_years)
+        detrended_flat[:, i] = data_flat[:, i] - trend
+
+    detrended_data = xr.DataArray(detrended_flat.reshape(shape), dims=data.dims, coords=data.coords)
+    return detrended_data
+
+def enso_index(sst, hf, start_year_int, end_year_int):
+    time_years = np.arange(len(sst['time'])) / 12 + start_year_int
+
+    detrended_sst = detrend_data(sst, time_years, order=3)
+    detrended_hf = detrend_data(hf, time_years, order=3)
+
+    # Remove seasonal cycle
+    sst_clim = detrended_sst.groupby('time.month').mean('time')
+    hf_clim = detrended_hf.groupby('time.month').mean('time')
+
+    ssta = detrended_sst.groupby('time.month') - sst_clim
+    hfa = detrended_hf.groupby('time.month') - hf_clim
+    
+    # Calculate ENSO index using Niño 3.4 region
+    lat_bounds = slice(-5, 5)
+    lon_bounds = slice(190, 240)  # 170W-120W
+    nino34_region = ssta.sel(lat=lat_bounds, lon=lon_bounds)
+
+    # Calculate cosine latitude weighting
+    lat_rad = np.deg2rad(nino34_region.lat)
+    cos_lat = np.cos(lat_rad)
+
+    # Weighted area average
+    nino34_index = (nino34_region * cos_lat).mean(['lat', 'lon'])
+
+    # Save Niño 3.4 index to a NetCDF file
+    nino34_ds = xr.Dataset({'nino': nino34_index})
+    nino34_ds.to_netcdf(file_path_enso_output)
+
+    return ssta, hfa, nino34_index
+
+# Call the function and handle the results
+ssta, hfa, nino34_index = enso_index(sst, hf, start_year_int, end_year_int)
+
+# Resample the data to the 1st of each month
+ssta_resampled = ssta.resample(time='MS').mean()
+hfa_resampled = hfa.resample(time='MS').mean()
+nino34_index_resampled = nino34_index.resample(time='MS').mean()
+
+# Interpolate to fill any missing values after resampling
+ssta_interpolated = ssta_resampled.interpolate_na('time')
+hfa_interpolated = hfa_resampled.interpolate_na('time')
+nino34_index_interpolated = nino34_index_resampled.interpolate_na('time')
+
+# Ensure time coordinates are aligned
+ssta_aligned = ssta_interpolated.sel(time=nino34_index_interpolated.time)
+hfa_aligned = hfa_interpolated.sel(time=nino34_index_interpolated.time)
+
+# ENSO regression
+def regression_map(nino_index, data, lat, lon):
+    slope = np.empty((lat.size, lon.size))
+    for i in range(lat.size):
+        for j in range(lon.size):
+            y = data[:, i, j]
+            valid_idx = ~np.isnan(y)
+            if np.sum(valid_idx) < 4:
+                slope[i, j] = np.nan
+                continue
+            slope[i, j], _, _, _, _ = stats.linregress(nino_index[valid_idx], y[valid_idx])
+    return slope
+
+lat2 = sst.lat
+lon2 = sst.lon
+
+regp = regression_map(nino34_index_interpolated, ssta_aligned, lat2, lon2)
+regp2 = regression_map(nino34_index_interpolated, hfa_aligned, lat2, lon2)
+
+# Remove ENSO signal
+sst_denso = ssta_aligned.copy()
+hf_denso = hfa_aligned.copy()
+nt = sst_denso.shape[0]
+
+for i in range(nt):
+    nino34_value = nino34_index_interpolated[i].values  # Get scalar value
+    sst_denso[i, :, :] = ssta_aligned[i, :, :] - nino34_value * regp
+    hf_denso[i, :, :] = hfa_aligned[i, :, :] - nino34_value * regp2
+    
+
+
+# Save to NetCDF
+sst_denso_ds = xr.Dataset({'sst': sst_denso})
+sst_denso_ds.to_netcdf(file_path_ssta_deno)
+
+hf_denso_ds = xr.Dataset({'net_heat_flux': hf_denso})
+hf_denso_ds.to_netcdf(file_path_hfa_deno)
