@@ -1,0 +1,114 @@
+
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import os
+
+# Load GCM feedback means from the provided Excel file
+excel_file_path = 
+gcm_data = pd.read_excel(excel_file_path)
+
+# Latitude bands for 10-degree intervals
+regions = [
+    "-60 to -50", "-50 to -40", "-40 to -30", "-30 to -20", "-20 to -10",
+    "-10 to 0", "0 to 10", "10 to 20", "20 to 30", "30 to 40", "40 to 50", "50 to 60"
+]
+
+# Extract GCM names and feedback values
+gcms = gcm_data["GCM"].unique()
+feedback_means = np.array([
+    gcm_data[gcm_data["GCM"] == gcm].set_index("Region").reindex(regions)["Feedback Mean"].values
+    for gcm in gcms
+])
+
+# Calculate the ensemble mean for GCMs
+ensemble_mean = feedback_means.mean(axis=0)
+
+# Observation data for ERA5_net and OAflux_net
+# ERA5_net data
+
+feedback_mean_ERA5_net = [
+
+
+ci_lower_ERA5_net = [
+
+]
+
+ci_upper_ERA5_net = [
+
+]
+
+
+
+# OAflux_net data
+
+feedback_mean_OAflux_net = [
+
+
+]
+
+ci_lower_OAflux_net = [
+
+
+
+]
+
+ci_upper_OAflux_net = [
+
+  
+
+]
+
+
+
+
+
+
+# Set up the plot
+plt.figure(figsize=(15, 8))
+
+
+for i, gcm_feedback in enumerate(feedback_means):
+    plt.plot(
+        range(len(regions)), gcm_feedback, 
+        color='lightblue', alpha=0.6, linewidth=1, 
+        label="CMIP6 Models" if i == 0 else "_nolegend_"  # Add a single legend entry
+    )
+# Plot ERA5_net feedback means with black square markers and lines
+plt.plot(
+    range(len(regions)), feedback_mean_ERA5_net, 
+    'ks-', label="ERA5 Feedback Mean", linewidth=5
+)
+# Plot ERA5_net confidence intervals
+plt.plot(range(len(regions)), ci_lower_ERA5_net, 'ks--', color='black', label="ERA5 ± $\sigma$")
+plt.plot(range(len(regions)), ci_upper_ERA5_net, 'ks--', color='black', label="_nolegend_")
+
+# Plot OAflux_net feedback means with red triangle markers and lines
+plt.plot(
+    range(len(regions)), feedback_mean_OAflux_net, 
+    'r^-', label="OAFlux Feedback Mean", linewidth=5
+)
+# Plot OAflux_net confidence intervals
+plt.plot(range(len(regions)), ci_lower_OAflux_net, 'r^--', color='red', label="OAFlux ± $\sigma$")
+plt.plot(range(len(regions)), ci_upper_OAflux_net, 'r^--', color='red', label="_nolegend_")
+
+# Plot GCM ensemble mean as a blue line
+plt.plot(
+    range(len(regions)), ensemble_mean, 
+    'b-', label="GCM Ensemble Mean", linewidth=5
+)
+
+# Add labels, title, and legend
+plt.title("Net Heat Flux Feedback: CMIP6 Models vs. Observations (2° Grid)", fontsize=18)
+plt.xlabel("Latitude Bands", fontsize=14)
+plt.ylabel("Feedback (W/m² K)", fontsize=14)
+plt.xticks(range(len(regions)), regions, rotation=45, fontsize=14)
+plt.yticks(fontsize=14)
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.legend(fontsize=14, loc='upper left', bbox_to_anchor=(1, 1))
+
+
+plt.tight_layout()
+plt.show()

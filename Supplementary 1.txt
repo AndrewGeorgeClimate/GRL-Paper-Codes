@@ -1,0 +1,122 @@
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Latitude bands
+# Latitude bands
+regions = [
+    "-60 to -50", "-50 to -40", "-40 to -30", "-30 to -20", "-20 to -10",
+    "-10 to 0", "0 to 10", "10 to 20", "20 to 30", "30 to 40", "40 to 50", "50 to 60"
+]
+
+
+feedback_means_ERA5 = {
+    "Net Heat Flux": [
+      
+    ],
+    "Latent Heat Flux": [
+       
+    ],
+    "Sensible Heat Flux": [
+      
+    ],
+    "Longwave Heat Flux": [
+      
+    ],
+    "Shortwave Heat Flux": [
+    
+    ]
+}
+
+# Feedback means for OAflux
+feedback_means_oaflux = {
+    "Net Heat Flux": [
+   
+    ],
+    "Latent Heat Flux": [
+     
+    ],
+    "Sensible Heat Flux": [
+  
+    ],
+    "Longwave Heat Flux": [
+       
+    ],
+    "Shortwave Heat Flux": [
+       
+    ]
+}
+
+# Offsets for side-by-side plotting
+offsets = [-0.3, 0.3]
+
+# Scaling factor for spacing
+scaling_factor = 2  # Increase this value for more spacing
+
+# Adjusted x-axis positions
+x_positions = np.arange(len(regions)) * scaling_factor
+
+# Colors for ERA5
+colors_ERA5 = {
+    "Net Heat Flux": "black",
+    "Latent Heat Flux": "maroon",
+    "Sensible Heat Flux": "orange",
+    "Longwave Heat Flux": "red",
+    "Shortwave Heat Flux": "purple"
+}
+
+# Colors for OAflux
+colors_oaflux = {
+    "Net Heat Flux": "red",
+    "Latent Heat Flux": "teal",
+    "Sensible Heat Flux": "cyan",
+    "Longwave Heat Flux": "blue",
+    "Shortwave Heat Flux": "gray"
+}
+
+# Plotting
+fig, axs = plt.subplots(2, 1, figsize=(10, 16), sharey=True)
+
+# Plot ERA5 data
+for flux_type, color in colors_ERA5.items():
+    linewidth = 3 if flux_type == "Net Heat Flux" else 1      axs[0].plot(
+        x_positions, 
+        feedback_means_ERA5[flux_type], 
+        marker='s', linestyle='-', linewidth=linewidth, color=color, 
+        label=f"{flux_type}", markersize=10 
+    )
+
+# ERA5 subplot configuration
+axs[0].set_title("ERA5 Local Feedback Comparison", fontsize=24) 
+#axs[0].set_xlabel("Latitude Bands", fontsize=22)  # Increased label size
+axs[0].set_ylabel("Feedback (W/m² K)", fontsize=22)  # Increased label size
+axs[0].set_xticks(x_positions)
+axs[0].set_xticklabels(regions, rotation=45, ha="right", fontsize=20)  
+axs[0].tick_params(axis='y', labelsize=20)  # Increased y-tick label size
+axs[0].grid(True, linestyle='--', alpha=0.5)
+axs[0].legend(loc='upper right', fontsize=15, frameon=True)  
+
+# Plot OAflux data
+for flux_type, color in colors_oaflux.items():
+    linewidth = 3 if flux_type == "Net Heat Flux" else 1  
+    axs[1].plot(
+        x_positions, 
+        feedback_means_oaflux[flux_type], 
+        marker='x', linestyle='-', linewidth=linewidth, color=color, 
+        label=f"{flux_type}", markersize=10 
+    )
+
+# OAflux subplot configuration
+axs[1].set_title("OAFlux Local Feedback Comparison", fontsize=24) 
+axs[1].set_xlabel("Latitude Bands", fontsize=22)  
+axs[1].set_ylabel("Feedback (W/m² K)", fontsize=22)
+axs[1].set_xticks(x_positions)
+axs[1].set_xticklabels(regions, rotation=45, ha="right", fontsize=20)  
+axs[1].tick_params(axis='y', labelsize=20)  
+axs[1].grid(True, linestyle='--', alpha=0.5)
+axs[1].legend(loc='upper right', fontsize=15, frameon=True)  
+
+# Adjust layout
+plt.tight_layout()
+plt.show()

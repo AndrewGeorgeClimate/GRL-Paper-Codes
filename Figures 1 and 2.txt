@@ -1,0 +1,168 @@
+
+
+
+import xarray as xr
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import matplotlib.colors as mcolors  # Import this module for colors
+
+# Define color map
+# Define color map
+colors = [
+    'darkred', 'red', 'lightcoral', 'lavenderblush', 'lightblue',
+    'deepskyblue', 'dodgerblue', 'royalblue', 'blue', 'mediumblue', 'midnightblue'
+]
+bounds = [-40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70]
+cmap = mcolors.ListedColormap(colors)
+norm = mcolors.BoundaryNorm(bounds, cmap.N)
+
+# Load the feedback variable from both files and filter latitude from -60 to 60
+
+
+feedback1 = 
+feedback2 = 
+feedback3 = 
+feedback4 = feedback3-feedback1
+feedback5 = feedback3-feedback2
+# Create subplots with 3 rows and 1 column
+fig, axs = plt.subplots(3, 1, figsize=(12, 18), subplot_kw={'projection': ccrs.PlateCarree()})
+
+# Define latitude and longitude ticks
+lat_ticks = [-60, -40, -20, 0, 20, 40, 60]
+lon_ticks = [-180, -120, -60, 0, 60, 120, 180]
+
+for ax in axs:
+    ax.set_xticks(lon_ticks, crs=ccrs.PlateCarree())
+    ax.set_yticks(lat_ticks, crs=ccrs.PlateCarree())
+    ax.set_xticklabels(["180W", "120W", "60W", "0", "60E", "120E", "180E"], fontsize=20)  
+    ax.set_yticklabels(["60S", "40S", "20S", "0", "20N", "40N", "60N"], fontsize=20)  
+    ax.gridlines(draw_labels=False)
+
+# Plot the feedback variable from the first file
+cbar = feedback1.plot(
+    ax=axs[0],
+    transform=ccrs.PlateCarree(),
+    cmap=cmap,
+    norm=norm,
+    add_labels=False,  # Remove automatic "lon" and "lat" labels
+    cbar_kwargs={
+        'label': 'Feedback (W/m² K)',  
+        'orientation': 'horizontal',  
+        'pad': 0.1,  
+        'aspect': 50  
+    }
+)
+axs[0].coastlines()
+axs[0].add_feature(cfeature.BORDERS, linestyle=':')
+axs[0].set_title('A. OAFlux Net Heat Flux Feedback (1984-2008)', fontsize=24)
+
+# Adjust colorbar label size
+cbar.colorbar.set_label('Feedback (W/m² K)', fontsize=22)
+cbar.colorbar.ax.tick_params(labelsize=18)
+
+
+# Plot the feedback variable from the second file
+cbar = feedback2.plot(
+    ax=axs[1],
+    transform=ccrs.PlateCarree(),
+    cmap=cmap,
+    norm=norm,
+    add_labels=False,  
+    cbar_kwargs={
+        'label': 'Feedback (W/m² K)',  
+        'orientation': 'horizontal',  
+        'pad': 0.1,  
+        'aspect': 50  
+    }
+)
+axs[1].coastlines()
+axs[1].add_feature(cfeature.BORDERS, linestyle=':')
+axs[1].set_title('B. ERA5 Net Heat Flux Feedback (1984-2008)', fontsize=24)
+
+# Adjust colorbar label size
+cbar.colorbar.set_label('Feedback (W/m² K)', fontsize=22)
+cbar.colorbar.ax.tick_params(labelsize=18)
+
+
+
+# Plot the feedback variable from the third file (multimodel mean)
+cbar = feedback3.plot(
+    ax=axs[2],
+    transform=ccrs.PlateCarree(),
+    cmap=cmap,
+    norm=norm,
+    add_labels=False,  
+    cbar_kwargs={
+        'label': 'Feedback (W/m² K)',  
+        'orientation': 'horizontal',  
+        'pad': 0.1,  
+        'aspect': 50  
+    }
+)
+axs[2].coastlines()
+axs[2].add_feature(cfeature.BORDERS, linestyle=':')
+axs[2].set_title('C. Multimodel Net Heat Flux Feedback (1984-2008)', fontsize=24)
+
+# Adjust colorbar label size
+cbar.colorbar.set_label('Feedback (W/m² K)', fontsize=22)
+cbar.colorbar.ax.tick_params(labelsize=18)
+
+
+# Final adjustments
+plt.tight_layout()
+plt.show()
+
+# Create a second figure with 2 subplots for residuals
+fig2, axs2 = plt.subplots(1, 2, figsize=(12, 12), subplot_kw={'projection': ccrs.PlateCarree()})
+
+for ax in axs2:
+    ax.set_xticks(lon_ticks, crs=ccrs.PlateCarree())
+    ax.set_yticks(lat_ticks, crs=ccrs.PlateCarree())
+    ax.set_xticklabels(["180W", "120W", "60W", "0", "60E", "120E", "180E"], fontsize=20)
+    ax.set_yticklabels(["60S", "40S", "20S", "0", "20N", "40N", "60N"], fontsize=20)
+    ax.gridlines(draw_labels=False)
+
+# Plot OAFlux - Multimodel Mean
+cbar = feedback4.plot(
+    ax=axs2[0],
+    transform=ccrs.PlateCarree(),
+    cmap=cmap,
+    norm=norm,
+    add_labels=False,
+    cbar_kwargs={
+        'label': 'Feedback Difference (W/m² K)',
+        'orientation': 'horizontal',
+        'pad': 0.1,
+        'aspect': 50
+    }
+)
+axs2[0].coastlines()
+axs2[0].add_feature(cfeature.BORDERS, linestyle=':')
+axs2[0].set_title('A. Multimodel Mean - OAFlux', fontsize=24)
+cbar.colorbar.set_label('Feedback Difference (W/m² K)', fontsize=22)
+cbar.colorbar.ax.tick_params(labelsize=18)
+
+# Plot ERA5 - Multimodel Mean
+cbar = feedback5.plot(
+    ax=axs2[1],
+    transform=ccrs.PlateCarree(),
+    cmap=cmap,
+    norm=norm,
+    add_labels=False,
+    cbar_kwargs={
+        'label': 'Feedback Difference (W/m² K)',
+        'orientation': 'horizontal',
+        'pad': 0.1,
+        'aspect': 50
+    }
+)
+axs2[1].coastlines()
+axs2[1].add_feature(cfeature.BORDERS, linestyle=':')
+axs2[1].set_title('B. Multimodel Mean - ERA5', fontsize=24)
+cbar.colorbar.set_label('Feedback Difference (W/m² K)', fontsize=22)
+cbar.colorbar.ax.tick_params(labelsize=18)
+
+# Final layout for second plot
+plt.tight_layout()
+plt.show()

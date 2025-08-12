@@ -1,0 +1,215 @@
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+# Latitude bands for 10-degree intervals
+regions = [
+    "-60 to -50", "-50 to -40", "-40 to -30", "-30 to -20", "-20 to -10",
+    "-10 to 0", "0 to 10", "10 to 20", "20 to 30", "30 to 40", "40 to 50", "50 to 60"
+]
+
+# Helper function to load data and calculate ensemble mean
+def load_gcm_data(excel_file_path):
+    gcm_data = pd.read_excel(excel_file_path)
+    gcms = gcm_data["GCM"].unique()
+    feedback_means = np.array([
+        gcm_data[gcm_data["GCM"] == gcm].set_index("Region").reindex(regions)["Feedback Mean"].values
+        for gcm in gcms
+    ])
+    ensemble_mean = feedback_means.mean(axis=0)
+    return feedback_means, ensemble_mean
+
+# Load data for each heat flux type
+latent_feedback, latent_ensemble = load_gcm_data()
+sensible_feedback, sensible_ensemble = load_gcm_data()
+longwave_feedback, longwave_ensemble = load_gcm_data()
+shortwave_feedback, shortwave_ensemble = load_gcm_data()
+
+# Observation data (insert data for each type here)
+# ERA5 Latent Heat Flux
+feedback_mean_ERA5_latent = [
+
+]
+
+ci_lower_ERA5_latent = [
+
+]
+
+ci_upper_ERA5_latent = [
+
+]
+
+
+feedback_mean_oaflux_latent = [
+
+  
+
+]
+
+ci_lower_oaflux_latent= [
+
+
+
+]
+
+ci_upper_oaflux_latent = [
+
+
+
+]
+
+
+
+
+feedback_mean_ERA5_sensible = [
+
+]
+
+ci_lower_ERA5_sensible = [
+
+]
+
+ci_upper_ERA5_sensible = [
+
+]
+
+
+
+
+feedback_mean_oaflux_sensible = [
+
+
+
+]
+
+ci_lower_oaflux_sensible = [
+
+
+
+]
+
+ci_upper_oaflux_sensible = [
+
+
+
+]
+
+
+
+feedback_mean_ERA5_longwave = [
+
+]
+
+ci_lower_ERA5_longwave = [
+
+]
+
+ci_upper_ERA5_longwave = [
+
+]
+
+
+feedback_mean_oaflux_longwave = [
+
+]
+
+ci_lower_oaflux_longwave = [
+
+]
+
+ci_upper_oaflux_longwave = [
+
+]
+
+
+feedback_mean_ERA5_shortwave = [
+
+]
+
+ci_lower_ERA5_shortwave = [
+
+]
+
+ci_upper_ERA5_shortwave = [
+
+]
+
+
+feedback_mean_oaflux_shortwave = [
+
+]
+
+ci_lower_oaflux_shortwave = [
+
+]
+
+ci_upper_oaflux_shortwave = [
+
+]
+
+
+# Create subplots
+fig, axes = plt.subplots(2, 2, figsize=(20, 16))
+
+# Function to plot each subplot
+def plot_flux(ax, title, gcm_feedback, ensemble_mean, feedback_mean_ERA5, ci_lower_ERA5, ci_upper_ERA5,
+              feedback_mean_oaflux, ci_lower_oaflux, ci_upper_oaflux):
+    # Plot GCM feedback means
+    for i, gcm_data in enumerate(gcm_feedback):
+        ax.plot(range(len(regions)), gcm_data, color='lightblue', alpha=0.6, linewidth=1, 
+                label="CMIP6 Models" if i == 0 else "_nolegend_")
+    
+    # Plot ERA5
+    ax.plot(range(len(regions)), feedback_mean_ERA5, 'ks-', label="ERA5 Feedback Mean", linewidth=3)
+    ax.plot(range(len(regions)), ci_lower_ERA5, 'ks--', color='black', label="ERA5 CI")
+    ax.plot(range(len(regions)), ci_upper_ERA5, 'ks--', color='black')
+    
+    # Plot OAflux
+    ax.plot(range(len(regions)), feedback_mean_oaflux, 'r^-', label="OAFlux Feedback Mean", linewidth=3)
+    ax.plot(range(len(regions)), ci_lower_oaflux, 'r^--', color='red', label="OAFlux CI")
+    ax.plot(range(len(regions)), ci_upper_oaflux, 'r^--', color='red')
+    
+    # Plot GCM ensemble mean
+    ax.plot(range(len(regions)), ensemble_mean, 'b-', label="GCM Ensemble Mean", linewidth=3)
+    
+    # Add labels and title with larger font sizes
+    ax.set_title(title, fontsize=32)  # Increased title font size
+    ax.set_xlabel("Latitude Bands", fontsize=28)  # Increased x-axis label size
+    ax.set_ylabel("Feedback (W/m² K)", fontsize=28)  # Increased y-axis label size
+    
+    # Increase tick label sizes
+    ax.set_xticks(range(len(regions)))
+    ax.set_xticklabels(regions, rotation=45, fontsize=24)  # Increase x tick label size
+    ax.tick_params(axis='y', labelsize=24)  # Increase y tick label size
+    
+    # Add grid lines
+    ax.grid(True, linestyle='--', alpha=0.5)
+    
+
+    ax.set_ylim(-5.5, 19)  # Set the y-axis range
+
+# Plot each heat flux type
+plot_flux(axes[0, 0], "A. Latent Heat Flux", latent_feedback, latent_ensemble, 
+          feedback_mean_ERA5_latent, ci_lower_ERA5_latent, ci_upper_ERA5_latent,
+          feedback_mean_oaflux_latent, ci_lower_oaflux_latent, ci_upper_oaflux_latent)
+plot_flux(axes[0, 1], "B. Sensible Heat Flux", sensible_feedback, sensible_ensemble, 
+          feedback_mean_ERA5_sensible, ci_lower_ERA5_sensible, ci_upper_ERA5_sensible,
+          feedback_mean_oaflux_sensible, ci_lower_oaflux_sensible, ci_upper_oaflux_sensible)
+plot_flux(axes[1, 0], "C. Longwave Heat Flux", longwave_feedback, longwave_ensemble, 
+          feedback_mean_ERA5_longwave, ci_lower_ERA5_longwave, ci_upper_ERA5_longwave,
+          feedback_mean_oaflux_longwave, ci_lower_oaflux_longwave, ci_upper_oaflux_longwave)
+plot_flux(axes[1, 1], "D. Shortwave Heat Flux", shortwave_feedback, shortwave_ensemble, 
+          feedback_mean_ERA5_shortwave, ci_lower_ERA5_shortwave, ci_upper_ERA5_shortwave,
+          feedback_mean_oaflux_shortwave, ci_lower_oaflux_shortwave, ci_upper_oaflux_shortwave)
+
+# Adjust layout and show plot
+fig.suptitle("2° Grid Heat Flux Feedback Comparison by Component", fontsize=36)
+plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+# Update legend font size
+plt.legend(fontsize=26, loc='upper left', bbox_to_anchor=(1, 1))
+
+plt.show()
+

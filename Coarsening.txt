@@ -1,0 +1,27 @@
+import xarray as xr
+import numpy as np
+import matplotlib.pyplot as plt
+
+# File path
+
+
+# Open dataset
+ds1 = xr.open_dataset(file_path)
+
+# Calculate latitude weights
+weights = np.cos(np.deg2rad(ds1['lat']))
+
+# Apply weights to the data
+weighted = ds1['net_heat_flux'] * weights
+
+# Coarsen the grid to 2x2 degrees, considering the mask
+rebinned_data = weighted.coarsen(lat=2, lon=2, boundary='pad').mean()
+
+
+
+# Rename the variable back
+rebinned_data = rebinned_data.to_dataset(name='net_heat_flux')
+
+# Save the coarsened data to a new NetCDF file
+output_file_path = 
+rebinned_data.to_netcdf(output_file_path)
